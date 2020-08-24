@@ -58,7 +58,6 @@ rt_single() {
 
 rt_trap() {
   [[ ${ROCOTO:-false} == true ]] && rocoto_kill
-  [[ ${ECFLOW:-false} == true ]] && ecflow_kill
   cleanup
 }
 
@@ -72,7 +71,7 @@ cleanup() {
 trap '{ echo "rt.sh interrupted"; rt_trap ; }' INT
 trap '{ echo "rt.sh quit"; rt_trap ; }' QUIT
 trap '{ echo "rt.sh terminated"; rt_trap ; }' TERM
-trap '{ echo "rt.sh error on line $LINENO"; cleanup ; }' ERR
+trap '{ echo "rt.sh error on line $LINENO"; rt_trap ; }' ERR
 trap '{ echo "rt.sh finished"; cleanup ; }' EXIT
 
 # PATHRT - Path to regression tests directory
@@ -187,6 +186,7 @@ elif [[ $MACHINE_ID = gaea.* ]]; then
   STMP=/lustre/f2/scratch
   PTMP=/lustre/f2/scratch
 
+  # default scheduler on Gaea
   SCHEDULER=slurm
   cp fv3_conf/fv3_slurm.IN_gaea fv3_conf/fv3_slurm.IN
 
@@ -214,10 +214,10 @@ elif [[ $MACHINE_ID = hera.* ]]; then
   QUEUE=batch
   COMPILE_QUEUE=batch
 
-#  ACCNR=fv3-cpu
+  ACCNR=gmtb
   PARTITION=
-  dprefix=/scratch1/NCEPDEV
-  DISKNM=$dprefix/nems/emc.nemspara/RT
+  dprefix=/scratch1/BMC/gmtb/Xia.Sun/RT
+  DISKNM=/scratch1/NCEPDEV/nems/emc.nemspara/RT
   STMP=$dprefix/stmp4
   PTMP=$dprefix/stmp2
 
@@ -236,7 +236,7 @@ elif [[ $MACHINE_ID = orion.* ]]; then
   # Re-instantiate COMPILER in case it gets deleted by module purge
   COMPILER=${NEMS_COMPILER:-intel}
 
-  module load contrib rocoto/1.3.1
+  module load rocoto/1.3.1
   ROCOTORUN=$(which rocotorun)
   ROCOTOSTAT=$(which rocotostat)
   ROCOTOCOMPLETE=$(which rocotocomplete)
@@ -286,6 +286,7 @@ elif [[ $MACHINE_ID = jet.* ]]; then
   STMP=$dprefix/RT_BASELINE
   PTMP=$dprefix/RT_RUNDIRS
 
+  # default scheduler on Jet
   SCHEDULER=slurm
   cp fv3_conf/fv3_slurm.IN_jet fv3_conf/fv3_slurm.IN
 
@@ -417,9 +418,9 @@ if [[ $SINGLE_NAME != '' ]]; then
 fi
 
 if [[ $MACHINE_ID = hera.* ]] || [[ $MACHINE_ID = orion.* ]] || [[ $MACHINE_ID = cheyenne.* ]]; then
-  RTPWD=${RTPWD:-$DISKNM/NEMSfv3gfs/develop-20200812/${COMPILER^^}}
+  RTPWD=${RTPWD:-$DISKNM/NEMSfv3gfs/develop-20200724/${COMPILER^^}}
 else
-  RTPWD=${RTPWD:-$DISKNM/NEMSfv3gfs/develop-20200812}
+  RTPWD=${RTPWD:-$DISKNM/NEMSfv3gfs/develop-20200724}
 fi
 
 shift $((OPTIND-1))
@@ -431,7 +432,7 @@ if [[ $CREATE_BASELINE == true ]]; then
   #
   rm -rf "${NEW_BASELINE}"
   mkdir -p "${NEW_BASELINE}"
-  echo "copy baseline inputs from: ${RTPWD}"
+  echo "copy baseline inputs form: ${RTPWD}"
   echo "                     to:   ${NEW_BASELINE}"
 
   rsync -a "${RTPWD}"/FV3_* "${NEW_BASELINE}"/
@@ -543,8 +544,7 @@ suite ${ECFLOW_SUITE}
     edit ECF_INCLUDE '${ECFLOW_RUN}'
     edit ECF_KILL_CMD kill -15 %ECF_RID% > %ECF_JOB%.kill 2>&1
     edit ECF_TRIES 1
-    label src_dir '${PATHTR}'
-    label run_dir '${RUNDIR_ROOT}'
+    label rundir_root '${RUNDIR_ROOT}'
     limit max_builds 10
     limit max_jobs 30
 EOF
